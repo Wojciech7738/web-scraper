@@ -22,9 +22,10 @@ class FileReaderWriter:
         """
         Saves extracted company data to a CSV file.
         Args:
-            data (list): List of dictionaries containing company data.
+            data (list): List of tuples containing companies data.
         """
+        dict_data = [{'Company': item[0], 'NIP': item[1], 'CEO': item[2]} for item in data]
         with open(self.output_file_path, mode='w', newline='', encoding='utf-8') as file:
             writer = csv.DictWriter(file, fieldnames=['Company', 'NIP', 'CEO'])
             writer.writeheader()
-            writer.writerows(data)
+            writer.writerows(dict_data)

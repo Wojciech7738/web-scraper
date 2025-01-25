@@ -19,8 +19,8 @@ class ScraperFacade:
         # Step 1: Fetch data from each URL
         for company_name in company_names:
             company_info = self.google_searcher.find_company_data(company_name)
-            all_companies_info.extend(company_info)
-
+            if company_info: # TODO: solve "not found" conflict
+                all_companies_info.append(company_info)
         # Step 2: Save results to a CSV file
         self.file_writer.save_to_csv(all_companies_info)
         print(f"Data saved to {self.file_writer.output_file_path}")

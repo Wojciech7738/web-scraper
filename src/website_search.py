@@ -10,18 +10,22 @@ from bs4 import BeautifulSoup
 
 class WebsiteSearch:
     def __init__(self):
-        # Configure Selenium WebDriver
         options = webdriver.ChromeOptions() 
         options.add_argument("start-maximized")
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_experimental_option('useAutomationExtension', False)
         self.driver = webdriver.Chrome(ChromeDriverManager().install(), options=options)
+        # TODO: move it to Config 
         self.nip_pattern = r"\d{3}-\d{2}-\d{2}-\d{2}|\d{9,10}"
-        self.ceo_pattern = r"prezes"
-        self.ceo_value_pattern = r"[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+(?: [A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+)+"
+        self.ceo_pattern = r"prezes|zarzad|zarząd"
+        self.ceo_value_pattern = r"(?:[A-ZŁŚŻ][a-ząćęłńóśźż]{2,}(?:\s[A-ZŁŚŻ][a-ząćęłńóśźż]{2,})?\s[A-ZĆŁŚŹŻ][a-ząćęłńóśźż]{1,}(?:\-[A-ZĆŁŚŹŻ][a-ząćęłńóśźż]{1,})?)|(?:[A-ZĄĆĘŁŃÓŚŹŻ]{3,}(?:\s[A-ZĄĆĘŁŃÓŚŹŻ]{3,})?\s[A-ZĄĆĘŁŃÓŚŹŻ]{2,}(?:\-[A-ZĄĆĘŁŃÓŚŹŻ]{2,})?)"
+        self.checking_website_urls = [
+            "https://rejestr.io",
+            "https://krs-pobierz.pl"
+        ]
     
     
-    def _enter_sublink_on_website(self, company_name):
+    def _is_sublink_on_website(self, company_name, url):
         # Collect all links
         html_content = self.driver.page_source
         soup = BeautifulSoup(html_content, "html.parser")
@@ -29,7 +33,7 @@ class WebsiteSearch:
         results = soup.find_all("a")
         if not results:
             print("No results found.")
-            return None
+            return False
         # Create regex pattern from company name (spaces can be replaced with something else on the website)
         pattern = company_name.lower().replace(" ", r".*")
         # Iterate through results and find the matching link
@@ -39,11 +43,17 @@ class WebsiteSearch:
                 href = result.get("href")
                 print(f"Found matching link: {link_text} -> {href}")
                 # Click the link using Selenium
-                self.driver.get(f"https://rejestr.io{href}")
+                try:
+                    self.driver.get(f"{url}{href}")
+                except Exception as e:
+                    # No sublink on the website
+                    del e
+                    return False
                 break
         else:
             print(f"No matching link found for company: {company_name}")
-            return None
+            return False
+        return True
     
     def find_company_data(self, company_name):
         """
@@ -53,27 +63,29 @@ class WebsiteSearch:
         Returns:
             str: The NIP of the company, or 'Not found' if unavailable.
         """
-        try:
-            # TODO: replace with link
-            self.driver.get("https://rejestr.io/")
-            search_box = self.driver.find_element(By.NAME, "q")
-            search_box = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.NAME, "q")))
-            search_box.send_keys(company_name)
-            search_box.send_keys(Keys.RETURN)
-            # Wait until the page is loaded
-            self._wait_for_page()
-            # TODO: use it if there is no info on the current site - SEARCH NIP FIRST
-            # TODO: if not results:
-            results = self._enter_sublink_on_website(company_name)
-            self._wait_for_page()
-            
-            # Wait for the page to load and find the NIP
-            nip = self.fetch_nip_from_page(self.driver.page_source, "NIP")
-            ceo = self.fetch_ceo_from_page(self.driver.page_source, "PREZES")
-            return (company_name, nip, ceo)
-        except Exception as e:
-            print(f"Error fetching NIP for {company_name}: {e}")
-        return None
+        results = []
+        for url in self.checking_website_urls:
+            try:
+                self.driver.get(url)
+                self.handle_cookies()
+                search_box = self.driver.find_element(By.NAME, "q")
+                search_box = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.NAME, "q")))
+                search_box.send_keys(company_name)
+                search_box.send_keys(Keys.RETURN)
+                # Wait until the page is loaded
+                self._wait_for_page()
+                nip = self.fetch_nip_from_page(self.driver.page_source)
+                ceo = self.fetch_ceo_from_page(self.driver.page_source)
+                if not nip or not ceo:
+                    # Enter a subpage and perform search once again
+                    if self._is_sublink_on_website(company_name, url):
+                        self._wait_for_page()
+                        nip = self.fetch_nip_from_page(self.driver.page_source)
+                        ceo = self.fetch_ceo_from_page(self.driver.page_source)
+                results.append((company_name, nip, ceo))
+            except Exception as e:
+                print(f"Error fetching NIP for {company_name}: {e}")
+        return self.compare_results(results)
     
     def close(self):
         """Closes the Selenium WebDriver."""
@@ -86,22 +98,41 @@ class WebsiteSearch:
         except Exception as e:
             del e
 
-    def fetch_nip_from_page(self, page_source, text_to_find):
+    def compare_results(self, original_results):
+        # Convert all elements to lowercase if all of them are not None and add index
+        result_list = [(index, (result[1].lower(), result[2].lower())) for index, result in enumerate(original_results) if all(result)]
+        if len(result_list) == 1:
+            return original_results[result_list[0][0]]
+        elif len(result_list) > 1:
+            # filter oroginal_results using indexes
+            original_results = [original_results[i] for i in [item[0] for item in result_list]]
+            result_list = [item[1] for item in result_list]
+            # inconsistent_with_indices = [(index, item) for index, item in enumerate(result_list) if item != result_list[0]]
+            inconsistent_elements = [item for item in result_list if item != result_list[0]]
+            # if there are multiple entries - pick the first source to resolve conflict
+            # TODO: better solution?
+            if inconsistent_elements:
+                return original_results[0]
+            # Check the result that contains lowercase character (as the second letter) in CEO's name
+            best_result = next((x for x in original_results if x[2][1].islower()), original_results[0])
+            return best_result
+        # Return None if there are no elements
+        return None
+
+
+    def fetch_nip_from_page(self, page_source):
         """
-        Extracts the text_to_find (NIP or CEO) from the HTML source of a company's page.
+        Extracts the NIP from the HTML source of a company's page.
         
         Args:
             page_source (str): The HTML source of the company's page.
         
         Returns:
-            str: The text_to_find if found, otherwise '{text_to_find} not found'.# TODO
+            str: The NIP number if found, None otherwise.
         """
         # Parse the HTML using BeautifulSoup
         soup = BeautifulSoup(page_source, 'html.parser')
-        
-        # Look for a tag containing text_to_find (adjust selector based on actual structure)
-        found_element = soup.find(string=lambda text: text and text_to_find in text)
-        
+        found_element = soup.find(string=lambda text: text and "NIP" in text)
         if found_element:
             # Check in the same container (parent)
             # If not found, search siblings or other levels
@@ -116,36 +147,73 @@ class WebsiteSearch:
         
         return None
     
-
-    def fetch_ceo_from_page(self, page_source, text_to_find):
+    def fetch_ceo_from_page(self, page_source):
         """
-        Extracts the text_to_find (NIP or CEO) from the HTML source of a company's page.
+        Extracts the CEO from the HTML source of a company's page.
         
         Args:
             page_source (str): The HTML source of the company's page.
         
         Returns:
-            str: The text_to_find if found, otherwise '{text_to_find} not found'.#TODO
+            str: The CEO name if found, None otherwise.
         """
         text_name_search_function = re.compile(self.ceo_pattern, re.IGNORECASE)
         # Parse the HTML using BeautifulSoup
         soup = BeautifulSoup(page_source, 'html.parser')
         
-        # Look for a tag containing text_to_find (adjust selector based on actual structure)
-        found_element = soup.find(string=text_name_search_function)
+        # Look for a tag containing CEO (adjust selector based on actual structure)
+        found_elements = soup.find_all(string=text_name_search_function)
         
-        if found_element:
-            # Start from the parent of the found element
-            current = found_element.find_parent()
-            while current:
-                # Iterate over all descendants of the current container
-                for descendant in current.find_all(class_="name"):
-                    if descendant.name == "p":
-                        # Check if the descendant contains text matching the pattern
-                        text_match = re.search(self.ceo_value_pattern, descendant.get_text(strip=True))
-                        if text_match:
-                            # Return the entire content of the matching element
-                            return descendant.get_text(strip=True)
-                # Move up the tree (to the next parent container)
-                current = current.find_parent()
+        if found_elements:
+            for found_element in found_elements:
+                # Start from the parent of the found element
+                current = found_element.find_parent()
+                # Iterate over all parents (maximum 4 times)
+                parent_count = 0
+                while current and parent_count < 4:
+                    # Iterate over all descendants of the current container
+                    all_classes = current.find_all(True)
+                    for descendant in all_classes:
+                        if descendant.name == "p":
+                            # Check if the descendant contains text matching the pattern
+                            text_match = re.search(self.ceo_value_pattern, descendant.get_text(strip=True))
+                            if text_match:
+                                # Return the entire content of the matching element
+                                return descendant.get_text(strip=True)
+                    # Move up the tree (to the next parent container)
+                    try:
+                        current = current.find_parent()
+                    except Exception as e:
+                        del e
+                        break
+                    parent_count += 1
         return None
+    
+    #TODO: move it into an abstract class?
+    def handle_cookies(self):
+        """
+        Handles the cookie consent popup by clicking "Reject all" or "Odrzuć wszystko".
+        """
+        try:
+            # Wait for the cookie popup to appear and locate the "Reject all" button
+            self._wait_for_page()
+            html = self.driver.page_source
+            soup = BeautifulSoup(html, 'html.parser')
+            button = soup.find(
+                lambda tag: tag.name in ["button", "span"]
+                and tag.get_text(strip=True)
+                and re.search(r"(Odrzuć wszystk|Reject all|Akceptuj wszystkie|Accept all)", tag.get_text(strip=True))
+            )
+            # Get XPATH
+            tag = button
+            xpath = "//" + tag.name
+            if tag.get('id'):
+                xpath += f"[@id='{tag.get('id')}']"
+            elif tag.get('class'):
+                xpath += f"[contains(@class, '{tag.get('class')[0]}')]"
+            button = WebDriverWait(self.driver, 10).until(
+                EC.element_to_be_clickable((By.XPATH, xpath))
+            )
+            button.click()
+        except Exception as e:
+            print("No cookie consent popup found or could not click any button:", e)
