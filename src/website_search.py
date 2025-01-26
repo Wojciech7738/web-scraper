@@ -14,18 +14,44 @@ class WebsiteSearch:
         options.add_argument("start-maximized")
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_experimental_option('useAutomationExtension', False)
+        # options.add_argument("--headless")
+        # options.add_argument("--disable-gpu")
+        # options.add_argument("--no-sandbox")
+        # options.add_argument("--disable-dev-shm-usage")
         self.driver = webdriver.Chrome(ChromeDriverManager().install(), options=options)
         # TODO: move it to Config 
         self.nip_pattern = r"\d{3}-\d{2}-\d{2}-\d{2}|\d{9,10}"
-        self.ceo_pattern = r"prezes|zarzad|zarząd"
-        self.ceo_value_pattern = r"(?:[A-ZŁŚŻ][a-ząćęłńóśźż]{2,}(?:\s[A-ZŁŚŻ][a-ząćęłńóśźż]{2,})?\s[A-ZĆŁŚŹŻ][a-ząćęłńóśźż]{1,}(?:\-[A-ZĆŁŚŹŻ][a-ząćęłńóśźż]{1,})?)|(?:[A-ZĄĆĘŁŃÓŚŹŻ]{3,}(?:\s[A-ZĄĆĘŁŃÓŚŹŻ]{3,})?\s[A-ZĄĆĘŁŃÓŚŹŻ]{2,}(?:\-[A-ZĄĆĘŁŃÓŚŹŻ]{2,})?)"
+        self.ceo_pattern = r"prezes|zarzad|zarząd|beneficjenci rzeczywiści|beneficjenci rzeczywisci"
+        self.ceo_value_pattern = r"^(?:[A-ZŁŚŻ][a-ząćęłńóśźż]{2,}(?:\s[A-ZŁŚŻ][a-ząćęłńóśźż]{2,})?\s[A-ZĆŁŚŹŻ][a-ząćęłńóśźż]{1,}(?:\-[A-ZĆŁŚŹŻ][a-ząćęłńóśźż]{1,})?)|(?:[A-ZĄĆĘŁŃÓŚŹŻ]{3,}(?:\s[A-ZĄĆĘŁŃÓŚŹŻ]{3,})?\s[A-ZĄĆĘŁŃÓŚŹŻ]{2,}(?:\-[A-ZĄĆĘŁŃÓŚŹŻ]{2,})?)$"
         self.checking_website_urls = [
             "https://rejestr.io",
             "https://krs-pobierz.pl"
         ]
+
+    def close(self):
+        """Closes the Selenium WebDriver."""
+        self.driver.quit()
     
-    
-    def _is_sublink_on_website(self, company_name, url):
+    def _enter_sublink_on_website(self, company_name, url):
+        def enter_the_link(href):
+            return_val = False
+            try:
+                self.driver.get(f"{url}{href}")
+                return_val = True
+            except Exception as e:
+                # Invalid sublink
+                del e
+            # Try to enter the sublink in a different way
+            if not return_val:
+                try:
+                    self.driver.get(href)
+                    return_val = True
+                except Exception as e:
+                    # No sublink on the website - restore the previous page
+                    self.driver.get(url)
+            self._wait_for_page()
+            return return_val
+
         # Collect all links
         html_content = self.driver.page_source
         soup = BeautifulSoup(html_content, "html.parser")
@@ -36,60 +62,23 @@ class WebsiteSearch:
             return False
         # Create regex pattern from company name (spaces can be replaced with something else on the website)
         pattern = company_name.lower().replace(" ", r".*")
-        # Iterate through results and find the matching link
-        for result in results:
-            link_text = result.get_text(strip=True).lower()
-            if re.findall(pattern, link_text):
+        # Get the links with their text containing the company name
+        results = [result for result in results if re.findall(pattern, result.get_text(strip=True).lower())]
+        if len(results) == 1:
+            href = results[0].get("href")
+            return enter_the_link(href)
+        elif len(results) > 1:
+            # Check if there is some specific word under given sublinks
+            for result in results:
                 href = result.get("href")
-                print(f"Found matching link: {link_text} -> {href}")
-                # Click the link using Selenium
-                try:
-                    self.driver.get(f"{url}{href}")
-                except Exception as e:
-                    # No sublink on the website
-                    del e
-                    return False
-                break
+                if href and enter_the_link(href): #TODO: move it to Config?
+                    if self._contains_keywords(self.driver.page_source, ["zwierząt", "spożywcze", "handel detaliczny", "sprzedaż"]):
+                        return True
         else:
             print(f"No matching link found for company: {company_name}")
-            return False
-        return True
-    
-    def find_company_data(self, company_name):
-        """
-        Fetches the NIP of a company by searching Google.
-        Args:
-            company_name (str): The name of the company.
-        Returns:
-            str: The NIP of the company, or 'Not found' if unavailable.
-        """
-        results = []
-        for url in self.checking_website_urls:
-            try:
-                self.driver.get(url)
-                self.handle_cookies()
-                search_box = self.driver.find_element(By.NAME, "q")
-                search_box = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.NAME, "q")))
-                search_box.send_keys(company_name)
-                search_box.send_keys(Keys.RETURN)
-                # Wait until the page is loaded
-                self._wait_for_page()
-                nip = self.fetch_nip_from_page(self.driver.page_source)
-                ceo = self.fetch_ceo_from_page(self.driver.page_source)
-                if not nip or not ceo:
-                    # Enter a subpage and perform search once again
-                    if self._is_sublink_on_website(company_name, url):
-                        self._wait_for_page()
-                        nip = self.fetch_nip_from_page(self.driver.page_source)
-                        ceo = self.fetch_ceo_from_page(self.driver.page_source)
-                results.append((company_name, nip, ceo))
-            except Exception as e:
-                print(f"Error fetching NIP for {company_name}: {e}")
-        return self.compare_results(results)
-    
-    def close(self):
-        """Closes the Selenium WebDriver."""
-        self.driver.quit()
+        # Restore previous page
+        self.driver.get(url)
+        return False
 
     def _wait_for_page(self):
         time.sleep(1) # TODO: get rid of it maybe?
@@ -118,7 +107,21 @@ class WebsiteSearch:
             return best_result
         # Return None if there are no elements
         return None
-
+    
+    def _contains_keywords(self, content, keywords):
+        """
+        Checks if the given content contains any of the specified keywords.
+        
+        Args:
+            content (str): The HTML content of the page.
+            keywords (list): List of keywords to search for.
+        
+        Returns:
+            bool: True if any keyword is found, False otherwise.
+        """
+        soup = BeautifulSoup(content, "html.parser")
+        text = soup.get_text(separator=" ").lower()
+        return any(keyword in text for keyword in keywords)
 
     def fetch_nip_from_page(self, page_source):
         """
@@ -176,7 +179,7 @@ class WebsiteSearch:
                     for descendant in all_classes:
                         if descendant.name == "p":
                             # Check if the descendant contains text matching the pattern
-                            text_match = re.search(self.ceo_value_pattern, descendant.get_text(strip=True))
+                            text_match = re.fullmatch(self.ceo_value_pattern, descendant.get_text(strip=True))
                             if text_match:
                                 # Return the entire content of the matching element
                                 return descendant.get_text(strip=True)
@@ -217,3 +220,31 @@ class WebsiteSearch:
             button.click()
         except Exception as e:
             print("No cookie consent popup found or could not click any button:", e)
+
+    def find_company_data(self, company_name):
+        """
+        Fetches the NIP of a company by searching Google.
+        Args:
+            company_name (str): The name of the company.
+        Returns:
+            str: The NIP of the company, or 'Not found' if unavailable.
+        """
+        results = []
+        for url in self.checking_website_urls:
+            try:
+                self.driver.get(url)
+                self.handle_cookies()
+                search_box = self.driver.find_element(By.NAME, "q")
+                search_box = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.NAME, "q")))
+                search_box.send_keys(company_name)
+                search_box.send_keys(Keys.RETURN)
+                # Wait until the page is loaded
+                self._wait_for_page()
+                # Try to enter a subpage and then perform the search
+                self._enter_sublink_on_website(company_name, url)
+                nip = self.fetch_nip_from_page(self.driver.page_source)
+                ceo = self.fetch_ceo_from_page(self.driver.page_source)
+                results.append((company_name, nip, ceo))
+            except Exception as e:
+                print(f"Error fetching NIP for {company_name}: {e}")
+        return self.compare_results(results)

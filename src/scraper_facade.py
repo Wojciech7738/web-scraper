@@ -2,6 +2,25 @@ from website_reader import WebSiteReader
 from file_reader_writer import FileReaderWriter
 # from google_search import GoogleSearch
 from website_search import WebsiteSearch
+from functools import wraps
+
+def cleanup(method):
+    """
+    A decorator to clean up specified attributes of the class instance after the method finishes.
+    """
+    @wraps(method)
+    def wrapper(self, *args, **kwargs):
+        result = None
+        try:
+            result = method(self, *args, **kwargs)
+        except Exception as e:
+            raise e
+        finally:
+            # Clean up the specified attributes
+            self.google_searcher.close()
+        return result
+    return wrapper
+
 
 class ScraperFacade:
     def __init__(self):
@@ -12,6 +31,7 @@ class ScraperFacade:
         self.google_searcher = WebsiteSearch()
         self.file_writer = FileReaderWriter()
 
+    @cleanup
     def process(self):
         all_companies_info = []
         company_names = self.file_writer.read_from_txt()
