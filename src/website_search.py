@@ -26,7 +26,9 @@ class WebsiteSearch:
         self.checking_website_urls = [
             "https://rejestr.io",
             "https://krs-pobierz.pl"
+            # "https://panoramafirm.pl"
         ]
+        self.company_branch_keywords = ["zwierząt", "spożywcze", "handel detaliczny", "sprzedaż"]
 
     def close(self):
         """Closes the Selenium WebDriver."""
@@ -71,8 +73,8 @@ class WebsiteSearch:
             # Check if there is some specific word under given sublinks
             for result in results:
                 href = result.get("href")
-                if href and enter_the_link(href): #TODO: move it to Config?
-                    if self._contains_keywords(self.driver.page_source, ["zwierząt", "spożywcze", "handel detaliczny", "sprzedaż"]):
+                if href and enter_the_link(href):
+                    if self._contains_keywords(self.driver.page_source, self.company_branch_keywords):
                         return True
         else:
             print(f"No matching link found for company: {company_name}")
@@ -99,7 +101,6 @@ class WebsiteSearch:
             # inconsistent_with_indices = [(index, item) for index, item in enumerate(result_list) if item != result_list[0]]
             inconsistent_elements = [item for item in result_list if item != result_list[0]]
             # if there are multiple entries - pick the first source to resolve conflict
-            # TODO: better solution?
             if inconsistent_elements:
                 return original_results[0]
             # Check the result that contains lowercase character (as the second letter) in CEO's name
@@ -192,7 +193,6 @@ class WebsiteSearch:
                     parent_count += 1
         return None
     
-    #TODO: move it into an abstract class?
     def handle_cookies(self):
         """
         Handles the cookie consent popup by clicking "Reject all" or "Odrzuć wszystko".
@@ -203,7 +203,7 @@ class WebsiteSearch:
             html = self.driver.page_source
             soup = BeautifulSoup(html, 'html.parser')
             button = soup.find(
-                lambda tag: tag.name in ["button", "span"]
+                lambda tag: tag.name in ["button", "span", "a"]
                 and tag.get_text(strip=True)
                 and re.search(r"(Odrzuć wszystk|Reject all|Akceptuj wszystkie|Accept all)", tag.get_text(strip=True))
             )

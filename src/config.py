@@ -18,6 +18,7 @@ class Config:
         self.project_path = project_path
         self.input_file_path = os.path.join(project_path, "input", "companies.txt")
         self.output_file_path = os.path.join(project_path, "output", "dog_cat_food_companies.csv")
+        self.api_key_file_path = os.path.join(project_path, "input", "api_key.txt")
 
     # @property
     # def project_path(self):
