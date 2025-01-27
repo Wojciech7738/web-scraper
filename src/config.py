@@ -1,48 +1,31 @@
 import os
 
-# A class for holding the whole configuration of the project
-class Config:
-    # _instance = None
+class SingletonMeta(type):
+    """
+    A metaclass for creating singleton classes.
+    """
+    _instances = {}
 
-    # def __new__(cls):
-    #     if cls._instance is None:
-    #         cls._instance = super(Config, cls).__new__(cls)
-    #         project_path = os.path.join(os.getcwd(), "web-scrapper")
-    #         cls._instance.project_path = project_path
-    #         # os.chdir(cls._instance.project_path)
-    #         cls._instance.input_file_path = os.path.join(project_path, "input", "companies.txt")
-    #         cls._instance.output_file_path = os.path.join(project_path, "output", "dog_cat_food_companies.csv")
-    #     return cls._instance
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super().__call__(*args, **kwargs)
+        return cls._instances[cls]
+
+# A class for holding the whole configuration of the project
+class Config(metaclass=SingletonMeta):
     def __init__(self):
         project_path = os.path.join(os.getcwd(), "web-scrapper")
         self.project_path = project_path
         self.input_file_path = os.path.join(project_path, "input", "companies.txt")
         self.output_file_path = os.path.join(project_path, "output", "dog_cat_food_companies.csv")
         self.api_key_file_path = os.path.join(project_path, "input", "api_key.txt")
+        self.nip_pattern = r"\d{3}-\d{2}-\d{2}-\d{2}|\d{9,10}"
+        self.ceo_pattern = r"prezes|zarzad|zarząd|beneficjenci rzeczywiści|beneficjenci rzeczywisci"
+        self.ceo_value_pattern = r"^(?:[A-ZŁŚŻ][a-ząćęłńóśźż]{2,}(?:\s[A-ZŁŚŻ][a-ząćęłńóśźż]{2,})?\s[A-ZĆŁŚŹŻ][a-ząćęłńóśźż]{1,}(?:\-[A-ZĆŁŚŹŻ][a-ząćęłńóśźż]{1,})?)|(?:[A-ZĄĆĘŁŃÓŚŹŻ]{3,}(?:\s[A-ZĄĆĘŁŃÓŚŹŻ]{3,})?\s[A-ZĄĆĘŁŃÓŚŹŻ]{2,}(?:\-[A-ZĄĆĘŁŃÓŚŹŻ]{2,})?)$"
+        self.checking_website_urls = [
+            "https://rejestr.io",
+            "https://krs-pobierz.pl"
+            # "https://panoramafirm.pl"
+        ]
+        self.company_branch_keywords = ["zwierząt", "spożywcze", "handel detaliczny", "sprzedaż"]
 
-    # @property
-    # def project_path(self):
-    #     return self.project_path
-    
-    # @project_path.setter
-    # def project_path(self, path):
-    #     self._project_path = path
-    #     # Update related paths when the project path changes
-    #     self._input_file_path = os.path.join(self._project_path, "input", "companies.txt")
-    #     self._output_file_path = os.path.join(self._project_path, "output", "dog_cat_food_companies.csv")
-    
-    # @property
-    # def input_file_path(self):
-    #     return self.input_file_path
-    
-    # @input_file_path.setter
-    # def input_file_path(self, path):
-    #     self._input_file_path = path
-    
-    # @property
-    # def output_file_path(self):
-    #     return self.output_file_path
-    
-    # @output_file_path.setter
-    # def output_file_path(self, path):
-    #     self._output_file_path = path

@@ -10,25 +10,18 @@ from bs4 import BeautifulSoup
 
 class WebsiteSearch:
     def __init__(self):
+        from config import Config
+        configuration = Config()
         options = webdriver.ChromeOptions() 
         options.add_argument("start-maximized")
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_experimental_option('useAutomationExtension', False)
-        # options.add_argument("--headless")
-        # options.add_argument("--disable-gpu")
-        # options.add_argument("--no-sandbox")
-        # options.add_argument("--disable-dev-shm-usage")
         self.driver = webdriver.Chrome(ChromeDriverManager().install(), options=options)
-        # TODO: move it to Config 
-        self.nip_pattern = r"\d{3}-\d{2}-\d{2}-\d{2}|\d{9,10}"
-        self.ceo_pattern = r"prezes|zarzad|zarząd|beneficjenci rzeczywiści|beneficjenci rzeczywisci"
-        self.ceo_value_pattern = r"^(?:[A-ZŁŚŻ][a-ząćęłńóśźż]{2,}(?:\s[A-ZŁŚŻ][a-ząćęłńóśźż]{2,})?\s[A-ZĆŁŚŹŻ][a-ząćęłńóśźż]{1,}(?:\-[A-ZĆŁŚŹŻ][a-ząćęłńóśźż]{1,})?)|(?:[A-ZĄĆĘŁŃÓŚŹŻ]{3,}(?:\s[A-ZĄĆĘŁŃÓŚŹŻ]{3,})?\s[A-ZĄĆĘŁŃÓŚŹŻ]{2,}(?:\-[A-ZĄĆĘŁŃÓŚŹŻ]{2,})?)$"
-        self.checking_website_urls = [
-            "https://rejestr.io",
-            "https://krs-pobierz.pl"
-            # "https://panoramafirm.pl"
-        ]
-        self.company_branch_keywords = ["zwierząt", "spożywcze", "handel detaliczny", "sprzedaż"]
+        self.nip_pattern = configuration.nip_pattern
+        self.ceo_pattern = configuration.ceo_pattern
+        self.ceo_value_pattern = configuration.ceo_value_pattern
+        self.checking_website_urls = configuration.checking_website_urls
+        self.company_branch_keywords = configuration.company_branch_keywords
 
     def close(self):
         """Closes the Selenium WebDriver."""

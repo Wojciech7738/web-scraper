@@ -3,10 +3,10 @@ from config import Config
 
 class FileReaderWriter:
     def __init__(self):
-        self.configuration = Config()
-        self.input_file_path = self.configuration.input_file_path
-        self.api_key_file_path = self.configuration.api_key_file_path
-        self.output_file_path = self.configuration.output_file_path
+        configuration = Config()
+        self.input_file_path = configuration.input_file_path
+        self.api_key_file_path = configuration.api_key_file_path
+        self.output_file_path = configuration.output_file_path
 
     def read_from_txt(self, get_api_key=False):
         """
