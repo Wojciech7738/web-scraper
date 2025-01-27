@@ -26,13 +26,14 @@ def cleanup(method):
 
 
 class ScraperFacade:
-    def __init__(self, search_engine="default"):
+    def __init__(self, search_engine="default", company_load_method="File"):
         """
         Initializes the facade with a list of URLs to scrape.
         """
         self.file_writer = FileReaderWriter()
         self.dedicated_searcher = None
         self.gus_client = None
+        self.company_load_method = company_load_method
         if search_engine == "API":
             self.perform_search = self.gus_api_search
         else:
@@ -40,8 +41,7 @@ class ScraperFacade:
 
     def search_company_info(self, search_engine):
         all_companies_info = []
-        # company_names = self.file_writer.read_from_txt()
-        company_names = ArticleReader().read_companies()
+        company_names = self.read_company_names()
         for company_name in company_names:
             company_info = search_engine.find_company_data(company_name)
             if company_info:
@@ -49,6 +49,13 @@ class ScraperFacade:
         # Step 2: Save results to a CSV file
         self.file_writer.save_to_csv(all_companies_info)
         print(f"Data saved to {self.file_writer.output_file_path}")
+
+    def read_company_names(self):
+        if self.company_load_method == "File":
+            company_names = self.file_writer.read_from_txt()
+        else:
+            company_names = ArticleReader().read_companies()
+        return company_names
 
     @cleanup
     def dedicated_website_search(self):
