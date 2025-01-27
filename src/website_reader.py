@@ -6,37 +6,6 @@ class WebSiteReader:
     def __init__(self):
         pass
 
-    # def fetch_company_data(self, url):
-    #     """
-    #     Fetches company names and NIP numbers from the given URL.
-    #     Args:
-    #         url (str): The URL of the page to scrape.
-    #     Returns:
-    #         list: A list of dictionaries containing company names and NIP numbers.
-    #     """
-    #     companies = []
-
-    #     try:
-    #         # Step 1: Fetch the content of the page
-    #         response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
-    #         response.raise_for_status()  # Ensure the request was successful
-    #     except requests.exceptions.RequestException as e:
-    #         print(f"Failed to fetch data from {url}: {e}")
-    #         return companies
-
-    #     # Step 2: Parse HTML content
-    #     soup = BeautifulSoup(response.text, 'html.parser')
-
-    #     # Step 3: Extract company information (example structure, may vary)
-    #     # Replace 'selector_for_company_name' and 'selector_for_nip' with real CSS selectors
-    #     company_elements = soup.select('.company')  # Example class for company data
-    #     for company in company_elements:
-    #         name = company.select_one('.name').get_text(strip=True)  # Extract company name
-    #         nip = company.select_one('.nip').get_text(strip=True)  # Extract NIP number
-    #         companies.append({'name': name, 'nip': nip})
-
-    #     return companies
-
     def fetch_company_data(self, url):
         """
         Fetches company names and NIP numbers from the given URL.
