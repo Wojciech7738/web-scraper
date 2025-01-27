@@ -4,3 +4,7 @@ DNP
 BIOFEED
 UNITED PETFOOD
 Acana Polska
+Royal Canin
+Purina
+Brit
+Josera
