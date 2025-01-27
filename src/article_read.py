@@ -24,7 +24,8 @@ class ArticleReader:
                 text=True,
                 capture_output=True
             )
-        except subprocess.CalledProcessError as e:
+            self.nlp = spacy.load("pl_core_news_sm")
+        except Exception as e:
             raise e
         
 
