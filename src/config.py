@@ -21,7 +21,7 @@ class Config(metaclass=SingletonMeta):
         self.api_key_file_path = os.path.join(project_path, "input", "api_key.txt")
         self.nip_pattern = r"\d{3}-\d{2}-\d{2}-\d{2}|\d{9,10}"
         self.ceo_pattern = r"prezes|zarzad|zarząd|beneficjenci rzeczywiści|beneficjenci rzeczywisci"
-        self.ceo_value_pattern = r"^(?:[A-ZŁŚŻ][a-ząćęłńóśźż]{2,}(?:\s[A-ZŁŚŻ][a-ząćęłńóśźż]{2,})?\s[A-ZĆŁŚŹŻ][a-ząćęłńóśźż]{1,}(?:\-[A-ZĆŁŚŹŻ][a-ząćęłńóśźż]{1,})?)|(?:[A-ZĄĆĘŁŃÓŚŹŻ]{3,}(?:\s[A-ZĄĆĘŁŃÓŚŹŻ]{3,})?\s[A-ZĄĆĘŁŃÓŚŹŻ]{2,}(?:\-[A-ZĄĆĘŁŃÓŚŹŻ]{2,})?)$"
+        self.ceo_value_pattern = r"^(?:[A-ZŁŚŻ][a-ząćęłńóśźż]{2,}(?:\s[A-ZŁŚŻ][a-ząćęłńóśźż]{2,}){0,2}\s[A-ZĆŁŚŹŻ][a-ząćęłńóśźż]{1,}(?:\-[A-ZĆŁŚŹŻ][a-ząćęłńóśźż]{1,})?)|(?:[A-ZĄĆĘŁŃÓŚŹŻ]{3,}(?:\s[A-ZĄĆĘŁŃÓŚŹŻ]{3,}){0,2}\s[A-ZĄĆĘŁŃÓŚŹŻ]{2,}(?:\-[A-ZĄĆĘŁŃÓŚŹŻ]{2,})?)$"
         self.checking_website_urls = [
             "https://rejestr.io",
             "https://krs-pobierz.pl"

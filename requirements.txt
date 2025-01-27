@@ -3,3 +3,4 @@ requests
 selenium==4.8.3
 webdriver
 webdriver_manager
+spacy

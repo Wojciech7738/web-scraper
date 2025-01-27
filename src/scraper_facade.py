@@ -2,6 +2,7 @@ from website_search import WebsiteSearch
 from file_reader_writer import FileReaderWriter
 from functools import wraps
 from gus_api import GUSAPIClient
+from article_read import ArticleReader
 
 def cleanup(method):
     """
@@ -39,7 +40,8 @@ class ScraperFacade:
 
     def search_company_info(self, search_engine):
         all_companies_info = []
-        company_names = self.file_writer.read_from_txt()
+        # company_names = self.file_writer.read_from_txt()
+        company_names = ArticleReader().read_companies()
         for company_name in company_names:
             company_info = search_engine.find_company_data(company_name)
             if company_info:
