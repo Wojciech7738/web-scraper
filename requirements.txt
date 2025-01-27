@@ -1,6 +1,6 @@
-bs4
-requests
+bs4==4.12.3
+requests==2.32.3
 selenium==4.8.3
-webdriver
-webdriver_manager
-spacy
+webdriver_manager==4.0.2
+spacy==3.8.4
+pytextrank

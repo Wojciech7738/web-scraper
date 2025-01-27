@@ -8,6 +8,7 @@ This script is used to search for company names on dedicated websites and save t
 
 - Python 3.12
 - Additional libraries listed in the `requirements.txt` file
+- Google Chrome
 
 ## Installation
 
