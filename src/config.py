@@ -14,7 +14,7 @@ class SingletonMeta(type):
 # A class for holding the whole configuration of the project
 class Config(metaclass=SingletonMeta):
     def __init__(self):
-        project_path = os.path.join(os.getcwd(), "web-scrapper")
+        project_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
         self.project_path = project_path
         self.input_file_path = os.path.join(project_path, "input", "companies.txt")
         self.output_file_path = os.path.join(project_path, "output", "dog_cat_food_companies.csv")

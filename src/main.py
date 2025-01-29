@@ -1,5 +1,5 @@
 from scraper_facade import ScraperFacade
-import sys
+import sys, os
 
 def Main():
     search_engine = None
